@@ -25,7 +25,7 @@ Pod::Spec.new do |s|
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'changsanjiang' => 'changsanjiang@gmail.com' }
-  s.source           = { :git => 'https://github.com/changsanjiang/SJMediaCacheServer.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/tech-387/SJMediaCacheServer.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.ios.deployment_target = '12.0'
