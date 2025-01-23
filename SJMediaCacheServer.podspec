@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'SJMediaCacheServer'
-  s.version          = '2.0.7'
+  s.version          = '2.0.8'
   s.summary          = <<-DESC
 SJMediaCacheServer is an efficient HTTP media caching framework.
   DESC
