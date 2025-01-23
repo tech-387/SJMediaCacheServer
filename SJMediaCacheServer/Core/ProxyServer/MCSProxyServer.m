@@ -119,6 +119,7 @@
     _localServer = [MCSHTTPServer.alloc initWithProxyServer:self];
     [_localServer setConnectionClass:MCSHTTPConnection.class];
     [_localServer setType:@"_http._tcp"];
+    _savedPort = 0;
     
     __weak typeof(self) _self = self;
     mHeartbeatManager = [MCSHeartbeatManager.alloc initWithInterval:5 failureHandler:^(MCSHeartbeatManager * _Nonnull mgr) {
@@ -142,13 +143,26 @@
 
 - (BOOL)start {
     @synchronized (self) {
-        if ( _localServer.isRunning ) return YES;
+        if ( _localServer.isRunning ) {
+            NSLog(@"MSCProxyServer: start(), localServer.isRunning");
+            return YES;
+        }
+        
+        [_localServer setPort:_savedPort];
         
         if ( ![_localServer start:NULL] ) {
+            NSLog(@"MSCProxyServer: start(), returning NO");
             return NO;
         }
         
         _serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://127.0.0.1:%d", _localServer.listeningPort]];
+        
+        
+        _savedPort = _localServer.listeningPort;
+   
+        // Start the server here using the chosen port
+        NSLog(@"Starting server at URL: %@", _serverURL);
+        
         mHeartbeatManager.serverURL = _serverURL;
         [_delegate serverDidStart:self];
         [mHeartbeatManager startHeartbeat];
