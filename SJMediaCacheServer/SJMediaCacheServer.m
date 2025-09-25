@@ -7,7 +7,8 @@
 //
 
 #import "SJMediaCacheServer.h"
-#import "MCSProxyServer.h"
+#import "MCTcpSocketServer.h"
+#import "MCHttpResponse.h"
 #import "MCSAssetManager.h"
 #import "MCSCacheManager.h"
 #import "MCSExporterManager.h"
@@ -16,9 +17,12 @@
 #import "MCSLogger.h"
 #import "MCSDownload.h"
 #import "MCSPrefetcherManager.h"
+#import "MCSNetworkUtils.h"
 
-@interface SJMediaCacheServer ()<MCSProxyServerDelegate>
-@property (nonatomic, strong, readonly) MCSProxyServer *server;
+@interface SJMediaCacheServer () {
+    MCTcpSocketServer *_server;
+    BOOL _enableAirPlaySupport;
+}
 @end
 
 @implementation SJMediaCacheServer
@@ -34,9 +38,26 @@
 - (instancetype)init {
     self = [super init];
     if ( self ) {
-        _server = [MCSProxyServer.alloc init];
-        _server.delegate = self;
-        
+        _enableAirPlaySupport = YES; // Default to enabled
+        _server = [MCTcpSocketServer.alloc init];
+        _server.onConnect = ^(MCTcpSocketConnection * _Nonnull connection) {
+            [MCHttpResponse processConnection:connection];
+        };
+        __weak typeof(self) _self = self;
+        _server.onListen = ^(uint16_t port) {
+            __strong typeof(_self) self = _self;
+            if ( self == nil ) return;
+            // Get device IP address for AirPlay support
+            NSString *deviceIP = @"127.0.0.1"; // Default to localhost
+            if (self->_enableAirPlaySupport) {
+                NSString *localIP = [MCSNetworkUtils getLocalIPAddress];
+                if (localIP) {
+                    deviceIP = localIP;
+                }
+            }
+            MCSURL.shared.serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://%@:%hu", deviceIP, port]];
+        };
+
         self.resolveAssetIdentifier = ^NSString * _Nonnull(NSURL * _Nonnull URL) {
             NSURLComponents *components = [NSURLComponents componentsWithURL:URL resolvingAgainstBaseURL:NO];
             components.query = nil; // ignore query parameters for identifier purposes
@@ -49,9 +70,6 @@
 - (nullable NSURL *)proxyURLFromURL:(NSURL *)URL {
     if ( URL == nil )
         return nil;
-    
-    if ( URL.isFileURL )
-        return URL;
 
     // proxy URL
     if ( _server.isRunning || [_server start] )
@@ -61,23 +79,14 @@
     return URL;
 }
 
-- (BOOL)isActive {
-    return _server.isRunning;
+- (BOOL)enableAirPlaySupport {
+    return _enableAirPlaySupport;
 }
 
-- (void)setActive:(BOOL)active {
-    active ? [_server start] : [_server stop];
+- (void)setEnableAirPlaySupport:(BOOL)enableAirPlaySupport {
+    _enableAirPlaySupport = enableAirPlaySupport;
 }
 
-#pragma mark - MCSProxyServerDelegate
-
-- (void)serverDidStart:(MCSProxyServer *)server {
-    MCSURL.shared.serverURL = _server.serverURL;
-}
-
-- (id<MCSProxyTask>)server:(MCSProxyServer *)server taskWithRequest:(NSURLRequest *)request delegate:(id<MCSProxyTaskDelegate>)delegate {
-    return [MCSProxyTask.alloc initWithRequest:request delegate:delegate];
-}
 @end
 
 
@@ -86,7 +95,7 @@
 - (void)setMaxConcurrentPrefetchCount:(NSInteger)maxConcurrentPrefetchCount {
     MCSPrefetcherManager.shared.maxConcurrentPrefetchCount = maxConcurrentPrefetchCount;
 }
- 
+
 - (NSInteger)maxConcurrentPrefetchCount {
     return MCSPrefetcherManager.shared.maxConcurrentPrefetchCount;
 }
@@ -166,13 +175,6 @@
 
 - (void (^_Nullable)(NSURLSession * _Nonnull, NSURLSessionTask * _Nonnull, NSURLSessionTaskMetrics * _Nonnull))metricsHandler {
     return MCSDownload.shared.metricsHandler;
-}
-
-- (void)setProxyTaskAbortCallback:(void (^_Nullable)(NSURLRequest * _Nonnull, NSError * _Nullable))proxyTaskAbortCallback {
-    _server.taskAbortCallback = proxyTaskAbortCallback;
-}
-- (void (^_Nullable)(NSURLRequest * _Nonnull, NSError * _Nullable))proxyTaskAbortCallback {
-    return _server.taskAbortCallback;
 }
 @end
 
@@ -289,7 +291,7 @@
 - (void)registerExportObserver:(id<MCSExportObserver>)observer {
     [MCSExporterManager.shared registerObserver:observer];
 }
- 
+
 - (void)removeExportObserver:(id<MCSExportObserver>)observer {
     [MCSExporterManager.shared removeObserver:observer];
 }
@@ -324,7 +326,7 @@
     }
     return nil;
 }
- 
+
 - (MCSExportStatus)exportStatusForURL:(NSURL *)URL {
     return [MCSExporterManager.shared statusForURL:URL];
 }

@@ -10,6 +10,7 @@
 #import <SJMediaCacheServer/SJMediaCacheServer.h>
 #import <SJVideoPlayer/SJVideoPlayer.h>
 #import <Masonry/Masonry.h>
+#import <AVKit/AVKit.h>
 
 static NSString *const DEMO_URL = @"http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8";
 
@@ -34,10 +35,18 @@ static NSString *const DEMO_URL = @"http://devimages.apple.com/iphone/samples/bi
     }];
     
     SJMediaCacheServer.shared.enabledConsoleLog = YES;
+    
+    AVRoutePickerView *routePickerView = [[AVRoutePickerView alloc]initWithFrame:CGRectMake(40, 88, 40, 40)];
+    [self.view addSubview:routePickerView];
 }
 
 - (IBAction)play:(id)sender {
+#ifdef DEBUG
+    NSLog(@"%d : %s", __LINE__, sel_getName(_cmd));
+#endif
+    
     NSURL *playbackURL = [SJMediaCacheServer.shared proxyURLFromURL:[NSURL URLWithString:DEMO_URL]];
     _player.URLAsset = [SJVideoPlayerURLAsset.alloc initWithURL:playbackURL startPosition:0];
 }
+
 @end

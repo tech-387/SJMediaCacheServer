@@ -247,7 +247,7 @@ static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
 
 /// @param byteRange #EXT-X-BYTERANGE or { NSNotFound, NSNotFound }
 - (NSString *)generateSegmentNodeIdentifierWithIdentifier:(NSString *)segmentIdentifier requestHeaderByteRange:(NSRange)byteRange {
-    return byteRange.location == NSNotFound ? segmentIdentifier : [NSString stringWithFormat:@"%@_%lu_%lu", segmentIdentifier, byteRange.location, byteRange.length];
+    return (byteRange.location == NSNotFound || byteRange.length == NSNotFound) ? segmentIdentifier : [NSString stringWithFormat:@"%@_%lu_%lu", segmentIdentifier, byteRange.location, byteRange.length];
 }
 
 #pragma mark - mark
@@ -405,6 +405,8 @@ static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
         case MCSDataTypeHLSSubtitles:
         case MCSDataTypeHLSInit:
         case MCSDataTypeHLS:
+        case MCSDataTypeLocalFileMask:
+        case MCSDataTypeLocalFile:
         case MCSDataTypeFILEMask:
         case MCSDataTypeFILE: return nil; /* return nil; */
         case MCSDataTypeHLSSegment: { // only segment
@@ -428,6 +430,7 @@ static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
                 return nil;
             }
         }
+            break;
     }
 }
 

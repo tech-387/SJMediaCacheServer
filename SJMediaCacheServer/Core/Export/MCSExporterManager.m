@@ -164,9 +164,9 @@
 - (void)removeAllAssets {
     @synchronized (self) {
         NSMutableArray<NSNumber *> *memoryExporterIds = mExporters.count != 0 ? ([NSMutableArray arrayWithCapacity:mExporters.count]) : nil;
-        for ( MCSExporter *exporter in mExporters ) {
+        [mExporters enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, MCSExporter * _Nonnull exporter, BOOL * _Nonnull stop) {
             [memoryExporterIds addObject:@(exporter.id)];
-        }
+        }];
         
         NSArray<SJSQLite3Condition *> *conditions = nil;
         if ( memoryExporterIds.count != 0 ) {
@@ -297,7 +297,7 @@
             NSArray<id<MCSExportObserver>> *observers = MCSAllHashTableObjects(self->mObservers);
             dispatch_async(dispatch_get_main_queue(), ^{
                 for ( id<MCSExportObserver> observer in observers ) {
-                    if ( [observer respondsToSelector:@selector(exporter:statusDidChange:)] ) {
+                    if ( [observer respondsToSelector:@selector(exporter:failedWithError:)] ) {
                         [observer exporter:exporter failedWithError:error];
                     }
                 }
@@ -327,6 +327,7 @@
     if ( exporter == nil ) {
         MCSAssetType type = [MCSURL.shared assetTypeForURL:URL];
         exporter = [MCSExporter.alloc initWithURLString:URL.absoluteString name:name type:type];
+        exporter.delegate = self;
         [MCSCacheManager.shared setProtected:YES forCacheWithURL:URL];
         [mSqlite3 save:exporter error:NULL];
         mExporters[name] = exporter;
@@ -345,6 +346,7 @@
         ] orderBy:nil error:NULL].firstObject;
         // add into memory
         if ( exporter != nil ) {
+            exporter.delegate = self;
             mExporters[name] = exporter;
         }
     }

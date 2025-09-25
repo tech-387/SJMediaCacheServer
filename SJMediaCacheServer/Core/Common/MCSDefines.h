@@ -11,8 +11,12 @@
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSUInteger, MCSAssetType) {
+    // remote file(http或https文件: http://xxx/xxx.mp4)
     MCSAssetTypeFILE,
-    MCSAssetTypeHLS
+    // hls
+    MCSAssetTypeHLS,
+    // local file(本地文件: file://xxx/xxx.mp4)
+    MCSAssetTypeLocalFile,
 };
 
 typedef NS_OPTIONS(NSUInteger, MCSDataType) {
@@ -26,6 +30,9 @@ typedef NS_OPTIONS(NSUInteger, MCSDataType) {
 
     MCSDataTypeFILEMask      = 0xFF00,
     MCSDataTypeFILE          = 1 << 8,
+    
+    MCSDataTypeLocalFileMask     = 0xFF0000,
+    MCSDataTypeLocalFile         = 1 << 16,
 };
 
 
@@ -37,10 +44,10 @@ typedef NS_OPTIONS(NSUInteger, MCSLogOptions) {
     MCSLogOptionHTTPConnection      = 1 << 4,
     MCSLogOptionSQLite              = 1 << 5,
     MCSLogOptionProxyTask           = 1 << 6,
-    MCSLogOptionHearbeat            = 1 << 7,
+    MCSLogOptionHeartbeat            = 1 << 7,
     
-    MCSLogOptionDefault = MCSLogOptionProxyTask | MCSLogOptionPrefetcher | MCSLogOptionHearbeat,
-    MCSLogOptionAll = MCSLogOptionPrefetcher | MCSLogOptionAssetReader | MCSLogOptionContentReader | MCSLogOptionDownloader | MCSLogOptionHTTPConnection | MCSLogOptionSQLite | MCSLogOptionProxyTask | MCSLogOptionHearbeat,
+    MCSLogOptionDefault = MCSLogOptionProxyTask | MCSLogOptionPrefetcher | MCSLogOptionHeartbeat,
+    MCSLogOptionAll = MCSLogOptionPrefetcher | MCSLogOptionAssetReader | MCSLogOptionContentReader | MCSLogOptionDownloader | MCSLogOptionHTTPConnection | MCSLogOptionSQLite | MCSLogOptionProxyTask | MCSLogOptionHeartbeat,
 };
 
 typedef NS_ENUM(NSUInteger, MCSLogLevel) {

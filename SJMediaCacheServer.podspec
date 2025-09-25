@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'SJMediaCacheServer'
-  s.version          = '2.0.99'
+  s.version          = '2.1.99'
   s.summary          = <<-DESC
 SJMediaCacheServer is an efficient HTTP media caching framework.
   DESC
@@ -34,12 +34,6 @@ The design of SJMediaCacheServer effectively reduces the number of network reque
   s.source_files = 'SJMediaCacheServer/*.{h,m}'
   s.subspec 'Core' do |ss|
     ss.source_files = 'SJMediaCacheServer/Core/**/*.{h,m}'
-    ss.dependency 'SJMediaCacheServer/KTVCocoaHTTPServer'
-  end
-  
-  s.subspec 'KTVCocoaHTTPServer' do |ss|
-    ss.source_files = 'SJMediaCacheServer/KTVCocoaHTTPServer/**/*.{h,m}'
-    ss.dependency 'CocoaAsyncSocket'
   end
   
   s.dependency 'SJUIKit/SQLite3'
