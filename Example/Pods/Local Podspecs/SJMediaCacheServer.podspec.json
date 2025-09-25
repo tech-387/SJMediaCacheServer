@@ -1,8 +1,8 @@
 {
   "name": "SJMediaCacheServer",
-  "version": "2.1.6",
-  "summary": "SJMediaCacheServer 是一个高效的 HTTP 媒体缓存框架，旨在代理媒体数据请求并优先提供缓存数据，从而减少网络流量并增强播放的流畅性。该框架支持两种类型的远程资源：基于文件的媒体，如 MP3、AAC、WAV、FLAC、OGG、MP4 和 MOV 等常见格式，以及 HLS（HTTP Live Streaming）流。它会自动解析 HLS 播放列表并代理各个媒体片段。",
-  "description": "https://github.com/changsanjiang/SJMediaCacheServer/blob/master/README.md",
+  "version": "2.1.99",
+  "summary": "SJMediaCacheServer is an efficient HTTP media caching framework.",
+  "description": "SJMediaCacheServer is an efficient HTTP media caching framework designed to proxy media data requests and prioritize serving cached data, thereby reducing network traffic and enhancing playback smoothness. The framework supports two types of remote resources: file-based media, such as common formats like MP3, AAC, WAV, FLAC, OGG, MP4, and MOV, as well as HLS (HTTP Live Streaming) streams. It automatically parses HLS playlists and proxies individual media segments.\nThe design of SJMediaCacheServer effectively reduces the number of network requests by serving cached content, thereby improving the playback experience for remote media resources whenever possible.",
   "homepage": "https://github.com/changsanjiang/SJMediaCacheServer",
   "license": {
     "type": "MIT",
@@ -12,15 +12,17 @@
     "changsanjiang": "changsanjiang@gmail.com"
   },
   "source": {
-    "git": "https://github.com/changsanjiang/SJMediaCacheServer.git",
-    "tag": "2.1.6"
+    "git": "https://github.com/tech-387/SJMediaCacheServer.git",
+    "tag": "2.1.99"
   },
   "platforms": {
     "ios": "12.0"
   },
   "source_files": "SJMediaCacheServer/*.{h,m}",
   "dependencies": {
-    "SJUIKit/SQLite3": []
+    "SJUIKit/SQLite3": [
+
+    ]
   },
   "resource_bundles": {
     "SJMediaCacheServer": [
