@@ -17,7 +17,6 @@
 #import "MCSLogger.h"
 #import "MCSDownload.h"
 #import "MCSPrefetcherManager.h"
-#import "MCSNetworkUtils.h"
 
 @interface SJMediaCacheServer () {
     MCTcpSocketServer *_server;
@@ -40,22 +39,14 @@
     if ( self ) {
         _enableAirPlaySupport = YES; // Default to enabled
         _server = [MCTcpSocketServer.alloc init];
+        _server.enableAirPlaySupport = _enableAirPlaySupport;
         _server.onConnect = ^(MCTcpSocketConnection * _Nonnull connection) {
             [MCHttpResponse processConnection:connection];
         };
-        __weak typeof(self) _self = self;
-        _server.onListen = ^(uint16_t port) {
-            __strong typeof(_self) self = _self;
-            if ( self == nil ) return;
-            // Get device IP address for AirPlay support
-            NSString *deviceIP = @"127.0.0.1"; // Default to localhost
-            if (self->_enableAirPlaySupport) {
-                NSString *localIP = [MCSNetworkUtils getLocalIPAddress];
-                if (localIP) {
-                    deviceIP = localIP;
-                }
-            }
-            MCSURL.shared.serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://%@:%hu", deviceIP, port]];
+        _server.onListen = ^(NSString * _Nonnull host, uint16_t port) {
+            // Use the exact host the server actually bound to, so the URLs handed out
+            // to clients can never point somewhere the listener isn't actually reachable.
+            MCSURL.shared.serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://%@:%hu", host, port]];
         };
 
         self.resolveAssetIdentifier = ^NSString * _Nonnull(NSURL * _Nonnull URL) {
@@ -85,6 +76,9 @@
 
 - (void)setEnableAirPlaySupport:(BOOL)enableAirPlaySupport {
     _enableAirPlaySupport = enableAirPlaySupport;
+    // Takes effect the next time the server (re)starts; it does not rebind an
+    // already-running listener.
+    _server.enableAirPlaySupport = enableAirPlaySupport;
 }
 
 @end

@@ -7,7 +7,6 @@
 //
 
 #import "HLSAssetParser.h"
-#import "MCSNetworkUtils.h"
 #import "MCSError.h"
 #import "MCSURL.h"
 #import "NSURLRequest+MCS.h"
@@ -287,19 +286,29 @@ static NSString *const HLS_CTX_LAST_INIT_END = @"HLS_CTX_LAST_INIT_END";
 
 - (NSString *)hls_restoreOriginalUrl:(NSURL *)resourceURL {
     if ( [self containsString:@"://"] ) {
-        // Check for localhost and device IP addresses
-        NSString *localhost = @"http://localhost";
-        NSString *deviceIP = [MCSNetworkUtils getLocalIPAddress];
-
-        if ( [self hasPrefix:localhost] ) {
-            return [NSURL URLWithString:[self substringFromIndex:localhost.length] relativeToURL:resourceURL].absoluteString;
+        // If this URI already points back at our own proxy server (whether via
+        // "localhost", "127.0.0.1", or whatever LAN IP the server is currently bound
+        // to for AirPlay support), strip that host/port prefix and resolve the remainder
+        // against the real resource URL. Matching is done via parsed host+port equality
+        // (not string-prefix) so e.g. "127.0.0.1" can't be confused with "127.0.0.15",
+        // and the currently active server IP is always considered valid — not just
+        // whichever literal happened to be hardcoded.
+        NSURL *URL = [NSURL URLWithString:self];
+        NSString *host = URL.host;
+        if ( host != nil ) {
+            NSURL *serverURL = MCSURL.shared.serverURL;
+            BOOL isLoopbackHost = [host isEqualToString:@"localhost"] || [host isEqualToString:@"127.0.0.1"];
+            BOOL isProxyServerHost = serverURL.host != nil && [host isEqualToString:serverURL.host];
+            BOOL isPortMatchedOrUnspecified = URL.port == nil || [URL.port isEqual:serverURL.port];
+            if ( (isLoopbackHost || isProxyServerHost) && isPortMatchedOrUnspecified ) {
+                NSString *prefix = URL.port != nil ?
+                    [NSString stringWithFormat:@"%@://%@:%@", URL.scheme, host, URL.port] :
+                    [NSString stringWithFormat:@"%@://%@", URL.scheme, host];
+                if ( [self hasPrefix:prefix] ) {
+                    return [NSURL URLWithString:[self substringFromIndex:prefix.length] relativeToURL:resourceURL].absoluteString;
+                }
+            }
         }
-
-        // Also check for device IP address
-        if (deviceIP && [self hasPrefix:[NSString stringWithFormat:@"http://%@", deviceIP]]) {
-            return [NSURL URLWithString:[self substringFromIndex:(deviceIP.length + 7)] relativeToURL:resourceURL].absoluteString;
-        }
-
         return self;
     }
     return [NSURL URLWithString:self relativeToURL:resourceURL].absoluteString;

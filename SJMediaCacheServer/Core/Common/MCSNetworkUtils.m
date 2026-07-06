@@ -50,7 +50,9 @@
         // Loop through linked list of interfaces
         temp_addr = interfaces;
         while (temp_addr != NULL) {
-            if (temp_addr->ifa_addr->sa_family == AF_INET) {
+            // ifa_addr can be NULL for some interfaces (e.g. certain VPN/utun entries);
+            // dereferencing it unconditionally can crash.
+            if (temp_addr->ifa_addr != NULL && temp_addr->ifa_addr->sa_family == AF_INET) {
                 // Check if interface is en0 (WiFi) or en1 (Cellular)
                 NSString *interfaceName = [NSString stringWithUTF8String:temp_addr->ifa_name];
                 if ([interfaceName isEqualToString:@"en0"] ||

@@ -42,7 +42,10 @@ MCSMimeType(NSString *filenameExtension) {
             NSMutableDictionary<NSString *, NSString *> *m = NSMutableDictionary.dictionary;
             m[@"default_mime_type"] = json[@"default"] ?: @"application/octet-stream";
             [(NSArray<NSDictionary<NSString *, NSString *> *> *)json[@"list"] enumerateObjectsUsingBlock:^(NSDictionary<NSString *, NSString *> * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-                m[obj[@"extension"]] = obj[@"mime_type"];
+                // A nil key (e.g. an entry missing "extension") would throw
+                // "key cannot be nil" on dictionary subscript assignment.
+                NSString *extension = obj[@"extension"];
+                if ( extension != nil ) m[extension] = obj[@"mime_type"];
             }];
             commonMimeTypes = m.copy;
         });

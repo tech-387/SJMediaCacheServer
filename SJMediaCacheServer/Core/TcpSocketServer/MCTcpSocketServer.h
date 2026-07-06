@@ -11,7 +11,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 @interface MCTcpSocketServer : NSObject
-@property (nonatomic, copy, nullable) void(^onListen)(uint16_t port);
+/// Whether the listener should bind to the device's actual LAN IP address (needed so
+/// external devices, e.g. an AirPlay receiver, can reach it) rather than only loopback.
+/// Default is YES. Takes effect the next time the server (re)starts.
+@property (nonatomic) BOOL enableAirPlaySupport;
+@property (nonatomic, copy, nullable) void(^onListen)(NSString *host, uint16_t port);
 @property (nonatomic, copy, nullable) void(^onConnect)(MCTcpSocketConnection *connection);
 @property (nonatomic, readonly) uint16_t port;
 @property (nonatomic, readonly, getter=isRunning) BOOL running;

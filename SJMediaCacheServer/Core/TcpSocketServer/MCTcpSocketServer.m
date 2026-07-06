@@ -133,6 +133,7 @@ static NSString *MCErrorLogsFilePath;
 
 - (instancetype)init {
     self = [super init];
+    _enableAirPlaySupport = YES;
     mPort = ATOMIC_VAR_INIT(0);
     mRunning = ATOMIC_VAR_INIT(NO);
     mServerQueue = dispatch_queue_create("lib.sj.MCTcpSocketServer", DISPATCH_QUEUE_SERIAL);
@@ -228,12 +229,14 @@ static NSString *MCErrorLogsFilePath;
 
     nw_parameters_t parameters = nw_parameters_create_secure_tcp(NW_PARAMETERS_DISABLE_PROTOCOL, NW_PARAMETERS_DEFAULT_CONFIGURATION);
 
-    // Get device IP address for AirPlay support
+    // Resolve the bind address once so the listener, the heartbeat pin, and the
+    // serverURL reported via onListen can never disagree about which host is in use.
     NSString *deviceIP = @"127.0.0.1"; // Default to localhost
-    // For AirPlay support, we need to use the device's actual IP address
-    NSString *localIP = [MCSNetworkUtils getLocalIPAddress];
-    if (localIP) {
-        deviceIP = localIP;
+    if ( self.enableAirPlaySupport ) {
+        NSString *localIP = [MCSNetworkUtils getLocalIPAddress];
+        if (localIP) {
+            deviceIP = localIP;
+        }
     }
 
     nw_endpoint_t endpoint = nw_endpoint_create_host(deviceIP.UTF8String, port_str);
@@ -289,9 +292,9 @@ static NSString *MCErrorLogsFilePath;
             uint16_t p = nw_listener_get_port(listener);
             if ( p != self.port ) {
                 atomic_store(&self->mPort, p);
-                if ( self->_onListen ) self->_onListen(p);
+                if ( self->_onListen ) self->_onListen(deviceIP, p);
             }
-            [self->mPin startWithPort:p];
+            [self->mPin startWithHost:deviceIP port:p];
         }
 
         // 释放同步锁

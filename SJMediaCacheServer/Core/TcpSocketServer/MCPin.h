@@ -16,7 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 // @param failureHandler 失败回调; 失败后会自动停止pin, 如需继续 pin 需要重新调用 start;
 - (instancetype)initWithInterval:(NSTimeInterval)interval failureHandler:(void(^)(void))failureHandler;
 
-- (void)startWithPort:(uint16_t)port;
+- (void)startWithHost:(NSString *)host port:(uint16_t)port;
 - (void)stop;
 
 @end
