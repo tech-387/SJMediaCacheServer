@@ -1,6 +1,6 @@
 {
   "name": "SJMediaCacheServer",
-  "version": "2.2.99",
+  "version": "2.3.99",
   "summary": "SJMediaCacheServer is an efficient HTTP media caching framework.",
   "description": "SJMediaCacheServer is an efficient HTTP media caching framework designed to proxy media data requests and prioritize serving cached data, thereby reducing network traffic and enhancing playback smoothness. The framework supports two types of remote resources: file-based media, such as common formats like MP3, AAC, WAV, FLAC, OGG, MP4, and MOV, as well as HLS (HTTP Live Streaming) streams. It automatically parses HLS playlists and proxies individual media segments.\nThe design of SJMediaCacheServer effectively reduces the number of network requests by serving cached content, thereby improving the playback experience for remote media resources whenever possible.",
   "homepage": "https://github.com/changsanjiang/SJMediaCacheServer",
@@ -13,7 +13,7 @@
   },
   "source": {
     "git": "https://github.com/tech-387/SJMediaCacheServer.git",
-    "tag": "2.2.99"
+    "tag": "2.3.99"
   },
   "platforms": {
     "ios": "12.0"
