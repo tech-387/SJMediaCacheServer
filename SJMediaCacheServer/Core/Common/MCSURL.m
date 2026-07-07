@@ -8,6 +8,7 @@
 
 #import "MCSURL.h"
 #import "MCSConsts.h"
+#import "MCSLogger.h"
 #include <CommonCrypto/CommonCrypto.h>
 
 static NSString * const MCS_PROXY_FLAG = @"url_proxy";
@@ -57,14 +58,23 @@ MCSMD5(NSString *str) {
     // If the URL is already a proxy URL, return it as-is.
     // Format: mcsproxy/assetName/proxyIdentifier(urlmd5.extension)?url=base64EncodedUrl(originalUrl)
     BOOL isProxyURL = [path containsString:MCS_PROXY_FLAG] || [path containsString:HLS_PROXY_URI_FLAG];
-    if ( isProxyURL ) return originalURL;
+    if ( isProxyURL ) {
+        // NOTE: returned as-is, NOT regenerated against the current serverURL. If a caller
+        // persists this URL across app launches / network changes instead of re-deriving it
+        // from the original remote URL each time, it can point at a host the server is no
+        // longer bound to.
+        MCSServerDebugLog(@"MCSURL: generateProxyURLFromURL -- input is already a proxy URL, returning unchanged { url: %@ };\n", originalURL);
+        return originalURL;
+    }
 
     NSAssert(_serverURL != nil, @"The serverURL can't be nil!");
     // Create proxy URL with encoded original URL as a query parameter.
     NSURLComponents *components = [NSURLComponents componentsWithURL:_serverURL resolvingAgainstBaseURL:NO];
     components.path = [@"/url_proxy" stringByAppendingPathComponent:path];
     components.query = [NSString stringWithFormat:@"url=%@", [self encode:originalURL]];
-    return components.URL;
+    NSURL *proxyURL = components.URL;
+    MCSServerDebugLog(@"MCSURL: generateProxyURLFromURL { originalURL: %@, serverURL: %@, proxyURL: %@ };\n", originalURL, _serverURL, proxyURL);
+    return proxyURL;
 }
 
 - (NSURL *)restoreURLFromProxyURL:(NSURL *)proxyURL {
@@ -103,6 +113,7 @@ MCSMD5(NSString *str) {
     
     // The asset name is the MD5 hash of the asset identifier.
     NSString *assetName = MCSMD5(assetIdentifier);
+    MCSServerDebugLog(@"MCSURL: assetNameForURL { requestURL: %@, originalURL: %@, assetIdentifier: %@, assetName: %@ };\n", URL, originalURL, assetIdentifier, assetName);
     return assetName;
 }
 

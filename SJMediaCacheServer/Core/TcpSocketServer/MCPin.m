@@ -127,6 +127,7 @@
         [self _clearTimer];
 
         NSURL *reqURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://%@:%hu", host, port]];
+        MCSHeartbeatDebugLog(@"%@<%p>.start { url: %@, interval: %.1f, timeout: %.1f, attempts: %ld };\n", NSStringFromClass(self.class), self, reqURL, mReqInterval, mReqTimeoutInterval, (long)mReqAttempts);
         __weak typeof(self) _self = self;
         mTimer = [MCTimer.alloc initWithQueue:dispatch_get_global_queue(0, 0) start:mReqInterval interval:mReqInterval repeats:YES block:^(MCTimer *timer) {
             __strong typeof(_self) self = _self;
@@ -145,6 +146,7 @@
                 @synchronized (self) {
                     if ( timer == self->mTimer ) {
                         if ( error != nil ) {
+                            MCSHeartbeatErrorLog(@"%@<%p>.allAttemptsFailed { url: %@, error: %@ } -- invoking failureHandler;\n", NSStringFromClass(self.class), self, reqURL, error);
                             [self stop];
                             self->mFailureHandler();
                             return;
@@ -155,7 +157,6 @@
             }];
         }];
         [mTimer resume];
-        MCSHeartbeatDebugLog(@"%@<%p>: %d : %s\n", NSStringFromClass(self.class), self, __LINE__, sel_getName(_cmd));
     }
 
 }
@@ -186,9 +187,10 @@
     request.timeoutInterval = mReqTimeoutInterval;
     [request addValue:@"1" forHTTPHeaderField:@"MC-PIN-REQ"];
     [[NSURLSession.sharedSession dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        MCSHeartbeatDebugLog(@"%@<%p>: %d : %s, status=%ld, error=%@\n", NSStringFromClass(self.class), self, __LINE__, sel_getName(_cmd), [(NSHTTPURLResponse *)response statusCode], error);
+        MCSHeartbeatDebugLog(@"%@<%p>.heartbeat { url: %@, remainingRetries: %ld, status: %ld, error: %@ };\n", NSStringFromClass(self.class), self, reqURL, (long)remainingRetries, (long)[(NSHTTPURLResponse *)response statusCode], error);
 
         if ( error != nil && remainingRetries > 0 ) {
+            MCSHeartbeatDebugLog(@"%@<%p>.retrying { url: %@, remainingRetries: %ld };\n", NSStringFromClass(self.class), self, reqURL, (long)(remainingRetries - 1));
             [self sendHeartbeatWithReqURL:reqURL remainingRetries:remainingRetries - 1 completion:completionHandler];
             return;
         }

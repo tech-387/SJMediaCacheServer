@@ -23,6 +23,7 @@
 
 #import "MCSError.h"
 #import "MCSRequest.h"
+#import "MCSLogger.h"
 
 @interface MCSAssetManager ()<MCSAssetReaderObserver, MCSAssetObserver> {
     NSUInteger mCountOfAllAssets;
@@ -131,12 +132,16 @@
     NSString *name = [MCSURL.shared assetNameForURL:URL];
     MCSAssetType type = [MCSURL.shared assetTypeForURL:URL];
     @synchronized (self) {
-        return [self _queryAssetForName:name type:type].isStored;
+        id<MCSAsset> asset = [self _queryAssetForName:name type:type];
+        BOOL isStored = asset.isStored;
+        MCSAssetDebugLog(@"MCSAssetManager: isAssetStoredForURL { url: %@, name: %@, found: %d, isStored: %d };\n", URL, name, asset != nil, isStored);
+        return isStored;
     }
 }
- 
+
 - (nullable id<MCSAssetReader>)readerWithRequest:(NSURLRequest *)proxyRequest networkTaskPriority:(float)networkTaskPriority delegate:(nullable id<MCSAssetReaderDelegate>)delegate {
     id<MCSAsset> asset = [self assetWithURL:proxyRequest.URL];
+    MCSAssetDebugLog(@"MCSAssetManager: readerWithRequest { proxyRequestURL: %@, assetName: %@, assetIsStored: %d };\n", proxyRequest.URL, asset.name, asset.isStored);
     id<MCSAssetReader> reader = [asset readerWithRequest:[MCSRequest.alloc initWithProxyRequest:proxyRequest] networkTaskPriority:networkTaskPriority readDataDecryptor:_readDataDecryptor delegate:delegate];
     return reader;
 }

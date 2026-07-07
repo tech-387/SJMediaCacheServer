@@ -45,9 +45,11 @@ typedef NS_OPTIONS(NSUInteger, MCSLogOptions) {
     MCSLogOptionSQLite              = 1 << 5,
     MCSLogOptionProxyTask           = 1 << 6,
     MCSLogOptionHeartbeat            = 1 << 7,
-    
-    MCSLogOptionDefault = MCSLogOptionProxyTask | MCSLogOptionPrefetcher | MCSLogOptionHeartbeat,
-    MCSLogOptionAll = MCSLogOptionPrefetcher | MCSLogOptionAssetReader | MCSLogOptionContentReader | MCSLogOptionDownloader | MCSLogOptionHTTPConnection | MCSLogOptionSQLite | MCSLogOptionProxyTask | MCSLogOptionHeartbeat,
+    MCSLogOptionServer              = 1 << 8,
+    MCSLogOptionAsset               = 1 << 9,
+
+    MCSLogOptionDefault = MCSLogOptionProxyTask | MCSLogOptionPrefetcher | MCSLogOptionHeartbeat | MCSLogOptionServer | MCSLogOptionAsset,
+    MCSLogOptionAll = MCSLogOptionPrefetcher | MCSLogOptionAssetReader | MCSLogOptionContentReader | MCSLogOptionDownloader | MCSLogOptionHTTPConnection | MCSLogOptionSQLite | MCSLogOptionProxyTask | MCSLogOptionHeartbeat | MCSLogOptionServer | MCSLogOptionAsset,
 };
 
 typedef NS_ENUM(NSUInteger, MCSLogLevel) {

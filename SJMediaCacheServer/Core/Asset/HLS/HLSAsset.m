@@ -20,6 +20,7 @@
 #import "MCSMimeType.h"
 #import "HLSAssetSegmentNode.h"
 #import "MCSAssetManager.h"
+#import "MCSLogger.h"
 
 static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
 
@@ -262,6 +263,7 @@ static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
         if ( !mAssembled ) {
             [self _check];
         }
+        MCSAssetDebugLog(@"%@: <%p>.isStored { name: %@, result: %d };\n", NSStringFromClass(self.class), self, self.name, mAssembled);
         return mAssembled;
     }
 }
@@ -661,10 +663,17 @@ static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
 - (void)_check {
     if ( mAssembled || mParser == nil ) return;
     if      ( mParser.segmentsCount != 0 ) {
-        if ( mAESKeys.count != mParser.keys.count ) return;
-        if ( mSegmentNodeMap.count != mParser.segmentsCount ) return;
+        if ( mAESKeys.count != mParser.keys.count ) {
+            MCSAssetDebugLog(@"%@: <%p>._check notAssembled { name: %@, reason: AES keys incomplete, cached: %lu, expected: %lu };\n", NSStringFromClass(self.class), self, self.name, (unsigned long)mAESKeys.count, (unsigned long)mParser.keys.count);
+            return;
+        }
+        if ( mSegmentNodeMap.count != mParser.segmentsCount ) {
+            MCSAssetDebugLog(@"%@: <%p>._check notAssembled { name: %@, reason: segment nodes incomplete, cached: %lu, expected: %lu };\n", NSStringFromClass(self.class), self, self.name, (unsigned long)mSegmentNodeMap.count, (unsigned long)mParser.segmentsCount);
+            return;
+        }
         __block BOOL isAllSegmentsCached = YES;
         __block BOOL isFullyTrimmed = YES;
+        __block NSUInteger uncachedCount = 0;
         [mSegmentNodeMap enumerateNodesUsingBlock:^(HLSAssetSegmentNode * _Nonnull node, BOOL * _Nonnull stop) {
             id<HLSAssetSegment> _Nullable fullSegment = node.fullContent;
             if ( fullSegment != nil ) {
@@ -675,10 +684,14 @@ static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
             else {
                 if ( isAllSegmentsCached ) isAllSegmentsCached = NO;
                 if ( isFullyTrimmed ) isFullyTrimmed = NO;
+                uncachedCount += 1;
                 // check continue for trim redundant contents
             }
         }];
         mAssembled = isAllSegmentsCached;
+        if ( !mAssembled ) {
+            MCSAssetDebugLog(@"%@: <%p>._check notAssembled { name: %@, reason: %lu/%lu segments not fully cached };\n", NSStringFromClass(self.class), self, self.name, (unsigned long)uncachedCount, (unsigned long)mParser.segmentsCount);
+        }
         if ( isFullyTrimmed ) mFullyTrimmed = isFullyTrimmed;
     }
     else if ( mParser.variantStream != nil ) {
@@ -688,13 +701,17 @@ static NSString *HLS_AES_KEY_MIME_TYPE = @"application/octet-stream";
         BOOL isSubtitlesRenditionStored = mParser.subtitlesRendition == nil || mSubtitlesContent != nil;
         mAssembled = isVariantStreamStored && isAudioRenditionStored && isVideoRenditionStored && isSubtitlesRenditionStored;
         mFullyTrimmed = YES;
+        if ( !mAssembled ) {
+            MCSAssetDebugLog(@"%@: <%p>._check notAssembled { name: %@, variantStreamStored: %d, audioRenditionStored: %d, videoRenditionStored: %d, subtitlesRenditionStored: %d };\n", NSStringFromClass(self.class), self, self.name, isVariantStreamStored, isAudioRenditionStored, isVideoRenditionStored, isSubtitlesRenditionStored);
+        }
     }
     else {
         mAssembled = YES;
         mFullyTrimmed = YES;
     }
-    
+
     if ( mAssembled ) {
+        MCSAssetDebugLog(@"%@: <%p>._check assembled { name: %@ };\n", NSStringFromClass(self.class), self, self.name);
         for ( id<MCSAssetObserver> observer in MCSAllHashTableObjects(mObservers) ) {
             if ( [observer respondsToSelector:@selector(assetDidStore:)] ) {
                 [observer assetDidStore:self];

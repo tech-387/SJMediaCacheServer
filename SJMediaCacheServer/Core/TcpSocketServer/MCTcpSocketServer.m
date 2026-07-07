@@ -12,6 +12,7 @@
 #import "NSFileHandle+MCS.h"
 #import "NSFileManager+MCS.h"
 #import "MCSNetworkUtils.h"
+#import "MCSLogger.h"
 
 @interface MCTcpSocketConnection () {
     nw_connection_t mConnection;
@@ -114,6 +115,7 @@
     nw_listener_t mListener;
     MCPin *mPin;
     BOOL mShouldRestartServer;
+    NSString *mHost; // the host the listener is actually bound to; guarded by @synchronized(self)
 }
 @end
 
@@ -134,6 +136,7 @@ static NSString *MCErrorLogsFilePath;
 - (instancetype)init {
     self = [super init];
     _enableAirPlaySupport = YES;
+    mHost = @"127.0.0.1";
     mPort = ATOMIC_VAR_INIT(0);
     mRunning = ATOMIC_VAR_INIT(NO);
     mServerQueue = dispatch_queue_create("lib.sj.MCTcpSocketServer", DISPATCH_QUEUE_SERIAL);
@@ -144,6 +147,7 @@ static NSString *MCErrorLogsFilePath;
         if ( self == nil ) return;
         @synchronized (self) {
             if ( self.isRunning ) {
+                MCSServerErrorLog(@"%@: <%p>.pinFailed { port: %u } -- scheduling restart;\n", NSStringFromClass(self.class), self, self.port);
 #ifdef DEBUG
                 [self _logMsg:[NSString stringWithFormat:@"Pin failed! Listener: %@, Port: %u", self->mListener, self.port]];
 #endif
@@ -177,16 +181,19 @@ static NSString *MCErrorLogsFilePath;
 - (BOOL)start {
     @synchronized (self) {
         if ( self.isRunning ) {
+            MCSServerDebugLog(@"%@: <%p>.start -- already running { host: %@, port: %u };\n", NSStringFromClass(self.class), self, mHost, self.port);
             return YES;
         }
 
         [self _startServer];
 
         if ( self.port == 0 ) {
+            MCSServerErrorLog(@"%@: <%p>.start FAILED -- port is 0 after _startServer;\n", NSStringFromClass(self.class), self);
             return NO;
         }
 
         atomic_store(&mRunning, YES);
+        MCSServerDebugLog(@"%@: <%p>.start succeeded { host: %@, port: %u };\n", NSStringFromClass(self.class), self, mHost, self.port);
         return YES;
     }
 }
@@ -196,6 +203,8 @@ static NSString *MCErrorLogsFilePath;
         if ( !self.isRunning ) {
             return;
         }
+
+        MCSServerDebugLog(@"%@: <%p>.stop { host: %@, port: %u };\n", NSStringFromClass(self.class), self, mHost, self.port);
 
         atomic_store(&mRunning, NO);
 
@@ -239,6 +248,8 @@ static NSString *MCErrorLogsFilePath;
         }
     }
 
+    MCSServerDebugLog(@"%@: <%p>._startServerWithPort { requestedPort: %u, resolvedHost: %@, enableAirPlaySupport: %d };\n", NSStringFromClass(self.class), self, port, deviceIP, self.enableAirPlaySupport);
+
     nw_endpoint_t endpoint = nw_endpoint_create_host(deviceIP.UTF8String, port_str);
     nw_parameters_set_local_endpoint(parameters, endpoint);
     nw_listener_t listener = nw_listener_create(parameters);
@@ -275,12 +286,17 @@ static NSString *MCErrorLogsFilePath;
                 break;
         }
 #endif
+        if ( state == nw_listener_state_waiting || state == nw_listener_state_failed || state == nw_listener_state_cancelled ) {
+            MCSServerDebugLog(@"%@: <%p>.listenerStateChanged { state: %d, requestedPort: %u, error: %@ };\n", NSStringFromClass(self.class), self, state, port, error);
+        }
+
         // 如果端口号被占用了, 将当前端口号置0重新分配;
         if ( error ) {
             nw_error_domain_t err_domain = nw_error_get_error_domain(error);
             if ( err_domain == nw_error_domain_posix ) {
                 int err_code = nw_error_get_error_code(error);
                 if ( err_code == EADDRINUSE ) {
+                    MCSServerErrorLog(@"%@: <%p>.listenerFailed EADDRINUSE, resetting port to 0;\n", NSStringFromClass(self.class), self);
                     atomic_store(&self->mPort, 0);
                 }
             }
@@ -290,10 +306,16 @@ static NSString *MCErrorLogsFilePath;
         // 启动 pin
         if ( state == nw_listener_state_ready ) {
             uint16_t p = nw_listener_get_port(listener);
-            if ( p != self.port ) {
-                atomic_store(&self->mPort, p);
-                if ( self->_onListen ) self->_onListen(deviceIP, p);
-            }
+            // NOTE: always fire onListen when the listener becomes ready, even if the
+            // port is unchanged -- the HOST can change across a restart (e.g. AirPlay's
+            // LAN IP <-> 127.0.0.1 fallback when WiFi drops/returns) while the port stays
+            // the same, since a restart re-requests the same port. Gating this on the
+            // port alone left MCSURL.shared.serverURL pointing at a dead host indefinitely.
+            BOOL hostOrPortChanged = (p != self.port) || ![deviceIP isEqualToString:self->mHost];
+            atomic_store(&self->mPort, p);
+            self->mHost = deviceIP;
+            MCSServerDebugLog(@"%@: <%p>.listenerReady { host: %@, port: %u, changed: %d };\n", NSStringFromClass(self.class), self, deviceIP, p, hostOrPortChanged);
+            if ( self->_onListen ) self->_onListen(deviceIP, p);
             [self->mPin startWithHost:deviceIP port:p];
         }
 
@@ -351,6 +373,7 @@ static NSString *MCErrorLogsFilePath;
 }
 
 - (void)_setNeedsRestartServer {
+    MCSServerDebugLog(@"%@: <%p>._setNeedsRestartServer { alreadyScheduled: %d };\n", NSStringFromClass(self.class), self, mShouldRestartServer);
 #ifdef DEBUG
     [self _logMsg:[NSString stringWithFormat:@"SetNeedsRestartServer; ShouldRestartServer: %d;", mShouldRestartServer]];
 #endif
@@ -371,6 +394,7 @@ static NSString *MCErrorLogsFilePath;
 }
 
 - (void)_restartServer {
+    MCSServerDebugLog(@"%@: <%p>._restartServer { previousPort: %u };\n", NSStringFromClass(self.class), self, self.port);
 #ifdef DEBUG
     [self _logMsg:[NSString stringWithFormat:@"Restart Server; Listener: %@, Port: %u;", mListener, self.port]];
 #endif

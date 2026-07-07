@@ -73,6 +73,18 @@ NS_ASSUME_NONNULL_BEGIN
 #define MCSHeartbeatErrorLog(format, arg...) \
     MCSErrorLog(MCSLogOptionHeartbeat, format, ##arg)
 
+// server (proxy TCP server lifecycle: start/stop/restart, bind host/port, serverURL updates)
+#define MCSServerDebugLog(format, arg...) \
+    MCSDebugLog(MCSLogOptionServer, format, ##arg)
+#define MCSServerErrorLog(format, arg...) \
+    MCSErrorLog(MCSLogOptionServer, format, ##arg)
+
+// asset (cache completeness / isStored bookkeeping for FILE and HLS assets)
+#define MCSAssetDebugLog(format, arg...) \
+    MCSDebugLog(MCSLogOptionAsset, format, ##arg)
+#define MCSAssetErrorLog(format, arg...) \
+    MCSErrorLog(MCSLogOptionAsset, format, ##arg)
+
 #else
 #define MCSDebugLog(option, format, arg...)
 #define MCSErrorLog(option, format, arg...)
@@ -90,5 +102,9 @@ NS_ASSUME_NONNULL_BEGIN
 #define MCSProxyTaskErrorLog(format, arg...)
 #define MCSHeartbeatDebugLog(format, arg...)
 #define MCSHeartbeatErrorLog(format, arg...)
+#define MCSServerDebugLog(format, arg...)
+#define MCSServerErrorLog(format, arg...)
+#define MCSAssetDebugLog(format, arg...)
+#define MCSAssetErrorLog(format, arg...)
 #endif
 NS_ASSUME_NONNULL_END

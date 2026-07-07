@@ -46,7 +46,9 @@
         _server.onListen = ^(NSString * _Nonnull host, uint16_t port) {
             // Use the exact host the server actually bound to, so the URLs handed out
             // to clients can never point somewhere the listener isn't actually reachable.
-            MCSURL.shared.serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://%@:%hu", host, port]];
+            NSURL *serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://%@:%hu", host, port]];
+            MCSServerDebugLog(@"SJMediaCacheServer: onListen -- serverURL updated to %@ (was %@);\n", serverURL, MCSURL.shared.serverURL);
+            MCSURL.shared.serverURL = serverURL;
         };
 
         self.resolveAssetIdentifier = ^NSString * _Nonnull(NSURL * _Nonnull URL) {
@@ -63,9 +65,13 @@
         return nil;
 
     // proxy URL
-    if ( _server.isRunning || [_server start] )
-        return [MCSURL.shared generateProxyURLFromURL:URL];
+    if ( _server.isRunning || [_server start] ) {
+        NSURL *proxyURL = [MCSURL.shared generateProxyURLFromURL:URL];
+        MCSServerDebugLog(@"SJMediaCacheServer: proxyURLFromURL { originalURL: %@, proxyURL: %@, serverURL: %@ };\n", URL, proxyURL, MCSURL.shared.serverURL);
+        return proxyURL;
+    }
 
+    MCSServerErrorLog(@"SJMediaCacheServer: proxyURLFromURL FAILED to start server -- returning original URL unproxied { url: %@ };\n", URL);
     // param URL
     return URL;
 }
@@ -75,6 +81,7 @@
 }
 
 - (void)setEnableAirPlaySupport:(BOOL)enableAirPlaySupport {
+    MCSServerDebugLog(@"SJMediaCacheServer: enableAirPlaySupport %d -> %d;\n", _enableAirPlaySupport, enableAirPlaySupport);
     _enableAirPlaySupport = enableAirPlaySupport;
     // Takes effect the next time the server (re)starts; it does not rebind an
     // already-running listener.

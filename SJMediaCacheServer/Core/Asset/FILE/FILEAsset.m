@@ -16,6 +16,7 @@
 #import "NSFileHandle+MCS.h"
 #import "MCSAssetManager.h"
 #import "MCSRequest.h"
+#import "MCSLogger.h"
 
 @interface FILEAsset () {
     NSHashTable<id<MCSAssetObserver>> *mObservers;
@@ -106,6 +107,7 @@
         if ( !mAssembled ) {
             [self _restructureContents];
         }
+        MCSAssetDebugLog(@"%@: <%p>.isStored { name: %@, result: %d };\n", NSStringFromClass(self.class), self, self.name, mAssembled);
         return mAssembled;
     }
 }
@@ -274,16 +276,20 @@
         if ( head != nil && head.longestContent.length == _totalLength ) {
             if ( !mAssembled ) {
                 mAssembled = YES;
+                MCSAssetDebugLog(@"%@: <%p>.assembled { name: %@, totalLength: %lu };\n", NSStringFromClass(self.class), self, self.name, (unsigned long)_totalLength);
                 for ( id<MCSAssetObserver> observer in MCSAllHashTableObjects(mObservers) ) {
                     if ( [observer respondsToSelector:@selector(assetDidStore:)] ) {
                         [observer assetDidStore:self];
                     }
                 }
             }
-            
+
             if ( !mFullyTrimmed ) {
                 mFullyTrimmed = mNodeList.count == 1 && head.numberOfContents == 1;
             }
+        }
+        else {
+            MCSAssetDebugLog(@"%@: <%p>.notYetAssembled { name: %@, cachedLength: %lu, totalLength: %lu, nodeCount: %lu };\n", NSStringFromClass(self.class), self, self.name, (unsigned long)(head.longestContent.length), (unsigned long)_totalLength, (unsigned long)mNodeList.count);
         }
     }
 }
